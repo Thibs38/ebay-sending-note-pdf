@@ -113,7 +113,13 @@ def retrieve_data_from_html(file_path):
         soup = BeautifulSoup(html_content, 'html.parser')
         translator = Translator(to_lang='en', from_lang=config["address"]["language-code"])
 
-        for button_element, button_type in get_type_content(soup, 'address'):
+        address = get_type_content(soup, 'address')
+        
+        if not address:
+            print("Can't find address")
+            return None
+        
+        for button_element, button_type in address:
             content = ' '.join(button_element.stripped_strings)
             type = ' '.join(button_type.stripped_strings)
             for search,replacement in config['address']['replacement'].items():
@@ -123,7 +129,12 @@ def retrieve_data_from_html(file_path):
             data.append(
                 {"type": type, "translated_type": translated_type, "content": content})
 
-        for button_element, button_type in get_type_content(soup, 'phone'):
+        phone = get_type_content(soup, 'phone')
+        if not phone:
+            print("Can't find phone number")
+            return None
+        
+        for button_element, button_type in phone:
             content = ' '.join(button_element.stripped_strings)
             type = ' '.join(button_type.stripped_strings)
             for search,replacement in config['address']['replacement'].items():
@@ -225,25 +236,33 @@ if file_path:
     data = retrieve_data_from_html(file_path)
 else:
     print("No HTML or TXT file found in the specified folder.")
+    
+if data:
+    
 
-paragraph = write_paragraph(data)
+    paragraph = write_paragraph(data)
 
-if pdf_path:
-    # Create a PDF writer for the generated content
-    generated_doc = SimpleDocTemplate(temp_path, pagesize=A4)
-    generated_doc.build(paragraph)
+    if pdf_path:
+        # Create a PDF writer for the generated content
+        generated_doc = SimpleDocTemplate(temp_path, pagesize=A4)
+        generated_doc.build(paragraph)
 
-    margin1 = [config['sending-note']['margin']['left'], config['sending-note']['margin']['top'], config['sending-note']['margin']['right'], config['sending-note']['margin']['bottom']]
-    margin2 = [config['address']['margin']['left'], config['address']['margin']['top'], config['address']['margin']['right'], config['address']['margin']['bottom']]
-    image_path1 = pdf_to_image(pdf_path, folder_path, "pdf", margin1)
-    image_path2 = pdf_to_image(temp_path, folder_path, "address", margin2)
+        margin1 = [config['sending-note']['margin']['left'], config['sending-note']['margin']['top'], config['sending-note']['margin']['right'], config['sending-note']['margin']['bottom']]
+        margin2 = [config['address']['margin']['left'], config['address']['margin']['top'], config['address']['margin']['right'], config['address']['margin']['bottom']]
+        image_path1 = pdf_to_image(pdf_path, folder_path, "pdf", margin1)
+        image_path2 = pdf_to_image(temp_path, folder_path, "address", margin2)
 
 
-    merged_path, w, h = merge_images_vertically(
-        image_path1, image_path2, folder_path+"merged.png")
+        merged_path, w, h = merge_images_vertically(
+            image_path1, image_path2, folder_path+"merged.png")
 
-    create_pdf_from_images(merged_path, folder_path + "/" + config["output-name"], w, h)
+        create_pdf_from_images(merged_path, folder_path + "/" + config["output-name"], w, h)
 
-    print(f"PDF generated and saved as 'output.pdf'")
+        print(f"PDF generated and saved as 'output.pdf'")
+    else:
+        print("No PDF file found in the specified folder.")
 else:
-    print("No PDF file found in the specified folder.")
+    print("Error when retrieving data, exiting without creating the document.")
+
+
+input("Press Enter to continue...")
